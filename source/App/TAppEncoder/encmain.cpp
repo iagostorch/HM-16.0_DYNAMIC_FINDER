@@ -42,7 +42,15 @@
 
 //! \ingroup TAppEncoder
 //! \{
-
+//DANIEL-IAGO variables to count the time taken per tile and CU
+FILE *time_perCU, *time_perTile;
+double time_tile[100];  
+//IAGO  Variables to keep the tiles' width/height per frame
+FILE *tilesWidthsHeights;
+int columnWidthArray[100];
+int rowHeightArray[100];
+int totalFrames = 100;
+int frame=0;
 #include "../Lib/TLibCommon/Debug.h"
 
 // ====================================================================================================================
@@ -53,6 +61,36 @@ int main(int argc, char* argv[])
 {
   TAppEncTop  cTAppEncTop;
 
+  //DANIEL BEGIN
+  time_perCU = fopen("time_perCU.txt","w");
+  time_perTile = fopen("time_perTile.csv","a");
+  //DANIEL END
+  
+  
+  //IAGO BEGIN  Read the file and save the numbers into the variables
+  //int i=0;
+  //int justAnumber;
+  //tilesWidthsHeights = fopen("tilesWidthsHeights.txt","r");
+  //char arquivo[50];
+  //int tileSize;
+  /*
+  for(i=0; i<totalFrames; i++){                                 //reads the sizes from the .txt and save them in the array
+      justAnumber = fscanf(tilesWidthsHeights, "%s", arquivo);
+      tileSize = atoi(arquivo);
+      columnWidthArray[i] = tileSize;
+      justAnumber = fscanf(tilesWidthsHeights, "%s", arquivo);
+      tileSize = atoi(arquivo);
+      rowHeightArray[i] = tileSize;
+      if(!justAnumber)  //solves the unused variable warning
+          printf(" "); 
+  }
+  fclose(tilesWidthsHeights);
+  */
+//  for (i=0; i<totalFrames; i++){
+//      printf("%d %d\n", columnWidthArray[i], rowHeightArray[i]);
+//  } 
+  //IAGO END
+  
   // print information
   fprintf( stdout, "\n" );
   fprintf( stdout, "HM software: Encoder Version [%s] (including RExt)", NV_VERSION );
@@ -103,6 +141,9 @@ int main(int argc, char* argv[])
 
   // destroy application encoder class
   cTAppEncTop.destroy();
+
+  fclose(time_perCU);
+  fclose(time_perTile);
 
   return 0;
 }

@@ -142,7 +142,8 @@ public:
   UInt         getInverseCUOrderMap( Int cuAddr )                    { return *(m_puiInverseCUOrderMap + (cuAddr>=m_uiNumCUsInFrame ? m_uiNumCUsInFrame : cuAddr)); }
   UInt         getPicSCUEncOrder( UInt SCUAddr );
   UInt         getPicSCUAddr( UInt SCUEncOrder );
-  Void         initTiles(TComPPS *pps);
+  //IAGO  the method was modified in order to receive the tiles' parameters from TEncGOP->compressGOP
+  Void         initTiles(TComPPS *pps, double *time_CU, int frame);
   UInt         xCalculateNxtCUAddr( UInt uiCurrCUAddr );
   SAOBlkParam* getSAOBlkParam() { return m_saoBlkParams;}
   Void deriveLoopFilterBoundaryAvailibility(Int ctu, Bool& isLeftAvail,Bool& isRightAvail,Bool& isAboveAvail,Bool& isBelowAvail,Bool& isAboveLeftAvail,Bool& isAboveRightAvail,Bool& isBelowLeftAvail,Bool& isBelowRightAvail);

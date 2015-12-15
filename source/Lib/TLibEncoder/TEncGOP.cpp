@@ -55,6 +55,9 @@ using namespace std;
 Bool g_bFinalEncode = false;
 #endif
 
+extern FILE *time_perTile;
+extern double time_tile[100];
+extern double time_compressEncode_CU[1001];    //IAGO SAVES THE TOTAL TIME PER CU   //IAGO
 //! \ingroup TLibEncoder
 //! \{
 
@@ -613,6 +616,12 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 
   for ( Int iGOPid=0; iGOPid < m_iGopSize; iGOPid++ )
   {
+    //DANIEL BEGIN
+    for(int i=0; i<100;i++)
+        time_tile[i]=0;
+    //DANIEL END
+
+
 #if EFFICIENT_FIELD_IRAP
     if(IRAPtoReorder)
     {
@@ -1141,8 +1150,13 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
 
     Int  p, j;
     UInt uiEncCUAddr;
-
-    pcPic->getPicSym()->initTiles(pcSlice->getPPS());
+    //IAGO  Selected the column/row size for the specific frame
+    //extern int columnWidthArray[100];
+   // extern int rowHeightArray[100];
+    extern int frame;
+    //extern FILE *tilesWidthsHeights;
+       
+    pcPic->getPicSym()->initTiles(pcSlice->getPPS(), time_compressEncode_CU, frame);   
 
     // Allocate some coders, now we know how many tiles there are.
     const Int iNumSubstreams = pcSlice->getPPS()->getNumSubstreams();
@@ -1227,6 +1241,9 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
       }
 
       nextCUAddr = (startCUAddrSlice > startCUAddrSliceSegment) ? startCUAddrSlice : startCUAddrSliceSegment;
+      //IAGO    increments the frames count
+      //printf("compressed slice %d\n", frame);   //IAGO
+      frame++;
     }
     m_storedStartCUAddrForEncodingSlice.push_back( pcSlice->getSliceCurEndCUAddr());
     startCUAddrSliceIdx++;
@@ -2224,6 +2241,15 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
       }
     }
 #endif
+//  //DANIEL BEGIN
+//    for(int i=0; i<100;i++) {
+//        if(time_tile[i]>0) {
+//            fprintf(time_perTile,"%f,",time_tile[i]);
+//        }
+//    }
+//    fprintf(time_perTile,"\n");
+//    //DANIEL END
+
   }
 
   delete pcBitstreamRedirect;
@@ -2544,6 +2570,20 @@ Void TEncGOP::xCalculateAddPSNR( TComPic* pcPic, TComPicYuv* pcPicD, const Acces
 #endif
 
   printf(" [Y %6.4lf dB    U %6.4lf dB    V %6.4lf dB]", dPSNR[COMPONENT_Y], dPSNR[COMPONENT_Cb], dPSNR[COMPONENT_Cr] );
+ 
+  //IAGO_BEGIN
+    //DANIEL BEGIN
+  
+  for(int i=0; i<100;i++) {
+        if(time_tile[i]>0) {
+            fprintf(time_perTile,"%f,",time_tile[i]);
+        }
+    }
+    fprintf(time_perTile,"%6.4lf,%10d,\n",dPSNR[COMPONENT_Y], uibits );
+   // fprintf(time_perTile,"\n");
+    //DANIEL END
+  //IAGO_END
+    
   if (printFrameMSE)
   {
     printf(" [Y MSE %6.4lf  U MSE %6.4lf  V MSE %6.4lf]", MSEyuvframe[COMPONENT_Y], MSEyuvframe[COMPONENT_Cb], MSEyuvframe[COMPONENT_Cr] );

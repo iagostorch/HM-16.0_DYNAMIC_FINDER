@@ -38,6 +38,7 @@
 #include "TComPicSym.h"
 #include "TComSampleAdaptiveOffset.h"
 #include "TComSlice.h"
+#include <math.h>   //IAGO
 
 //! \ingroup TLibCommon
 //! \{
@@ -68,6 +69,125 @@ TComPicSym::TComPicSym()
 ,m_puiInverseCUOrderMap(NULL)
 ,m_saoBlkParams(NULL)
 {}
+
+//IAGO
+//SUMS THE TILE PARAMETERS IN THE SQUARE LIMITED BY THE INITIAL/FINAL ROWS/COLLUMN
+float sumTilePartitions(double frameMatrix[100][100], int initialRow, int finalRow, int initialColumn, int finalColumn){	//FINAL COLUMN AND ROW ARE OPEN
+    //printf("calculando limites %d-%d %d-%d\n", initialRow, finalRow, initialColumn, finalColumn);
+    int i, j;
+    float tileTotal = 0.0;
+    for(i=initialRow; i<finalRow; i++){
+    	for(j=initialColumn; j<finalColumn; j++){
+        	tileTotal = tileTotal + frameMatrix[i][j];
+        }
+    }
+    return tileTotal;
+}   
+//#########################POR TERMINAR###########################
+void shiftLeftBoundaries(TComPPS *pps, UInt* optimalCols, UInt *optimalRows){       //SHIFTS EVERY BOUNDARY 1 CU TO THE LEFT
+    int boundary;
+    for(boundary=0; boundary < pps->getTileNumRowsMinus1(); boundary++){
+        if((boundary==0 && optimalCols[boundary]>4) || (boundary>0 && optimalCols[boundary]-optimalCols[boundary-1]>4)){ //IF THE GIVEN TILE IS BIGGER THAN THE MINIMUM SIZE, MAKE IT 1 CU SMALLER
+            optimalCols[boundary] = optimalCols[boundary]-1;
+        }
+    }
+}
+void extractOptimalPartitions(TComPPS *pps, double *time_CU, UInt* optimalCols, UInt* optimalRows, UInt widthInCU, UInt heightInCU){ 
+    //double** frameMatrix = (double**) malloc(heightInCU*sizeof(double*));
+    //for(i=0; i<widthInCU; i++)  frameMatrix[i] = (double*) malloc(widthInCU*sizeof(double*));
+    //printf("EXTRAINDO OPTIMAL\n");
+    int i, j, boundary;
+    double frameMatrix[100][100];
+    double total, average, current, currentDifference, previous, previousDifference;
+    
+    
+    
+    for(i=0; i<heightInCU; i++){        //INITIALISE THE FRAME MATRIX WITH THE ARRAY
+        for(j=0; j<widthInCU; j++){
+            frameMatrix[i][j] = time_CU[i*widthInCU+j];
+            //printf("%d %f\n", i*widthInCU+j, time_CU[i*widthInCU+j]);
+        }
+    }
+     
+    /*  PRINTS FRAME MATRIX
+    for(i=0; i<heightInCU; i++){
+        for(j=0; j<widthInCU; j++){
+            printf("%f ", frameMatrix[i][j]);
+        }
+        printf("\n");
+    }
+    //*/
+    total = sumTilePartitions(frameMatrix, 0, heightInCU, 0, widthInCU);
+    //printf("TOTAL %f\n", total);
+    
+    previous = 0;
+    average = total/(pps->getTileNumRowsMinus1()+1);
+    //printf("average rows %f\n", average);
+    for(boundary = 0; boundary < pps->getTileNumRowsMinus1(); boundary++){
+        for(i=0; i<heightInCU; i++){
+            current =  sumTilePartitions(frameMatrix, 0, i, 0, widthInCU);
+            if(current > (boundary+1)*average){
+                currentDifference = fabs((boundary+1)*average - current);
+                previousDifference = fabs((boundary+1)*average - previous);
+                if(currentDifference > previousDifference)  //PREVIOUS IS BETTER
+                    optimalRows[boundary] = i-1;
+                else
+                    optimalRows[boundary] = i;
+                break;
+            }
+            previous = current;
+        }
+    }
+    
+    previous=0;
+    average = total/(pps->getNumTileColumnsMinus1()+1);
+    //printf("average columns %f\n", average);
+    for(boundary = 0; boundary < pps->getNumTileColumnsMinus1(); boundary++){
+        for(j=0; i<widthInCU; j++){
+            current =  sumTilePartitions(frameMatrix, 0, heightInCU, 0, j);         //CALCULATE THE CURRENT PARTITION TIME
+            if(current > (boundary+1)*average){                                 //COMPARES THE CURRENT WITH THE OPTIMAL DESIRED TIME, IF IT'S BIGGER THEN
+                currentDifference = fabs((boundary+1)*average - current);       //COMPARES THE CURRENT PARTITION WITH THE PREVIOUS ONE AND SELECT THE BEST
+                previousDifference = fabs((boundary+1)*average - previous);
+                if((currentDifference > previousDifference) && ((boundary==0 && j>=5) || (boundary>0 && j-optimalCols[boundary-1]>=5))){  //PREVIOUS IS BETTER, COLUMN MUST BE 4 CUs WIDE OR MORE
+                    optimalCols[boundary] = j-1;
+                    break;
+                }
+                else if((boundary==0 && j>=4) || (boundary>0 && j-optimalCols[boundary-1]>=4)){                                           //COLUMN MUST BE 4 CUs WIDE OR MORE
+                    optimalCols[boundary] = j;
+                    break;
+                }
+            }
+            previous = current;
+        }
+        if(j == widthInCU){     //IF J HIT THE LAST CU, THERE WASN'T A POSSIBLE PARTITION 
+            printf("FALTOU ESPAÇO\n");
+            shiftLeftBoundaries(pps, optimalCols, optimalRows); //SHIFTS EVERY BOUNDARY 1 CU TO THE LEFT, MAKING ROOM FOR THE NEXT TILE
+            boundary--;                                         //RE-CALCULATE THE CURRENT BOUNDARY
+        }
+    }
+    /*
+    printf("COLUNAS/LINHAS DO EXTRACT\n");
+    for(j=0; j<pps->getNumTileColumnsMinus1(); j++)
+        printf("coluna %d\n", optimalCols[j]);
+    for(i=0; i<pps->getTileNumRowsMinus1(); i++)
+        printf("linha %d\n", optimalRows[i]);
+    //*/
+   // printf("LINHAS/COLUNAS NORMALIZADAS\n");
+     
+}
+
+void extractUniformPartition(TComPPS *pps, UInt *optimalColumns, UInt *optimalRows, UInt widthInCU, UInt heightInCU){
+    //CALCULAR AS PARTIÇÕES UNIFORMES USANDO  MESMO CALCULO DO PADRÃO
+    //printf("EXTRAINDO UNIFORM\n"); 
+    int i, j;
+    for(i=0; i < pps->getTileNumRowsMinus1(); i++){
+        optimalRows[i] = (i+1)*heightInCU/(pps->getTileNumRowsMinus1()+1);
+    }
+    for(j=0; j < pps->getNumTileColumnsMinus1(); j++){
+        optimalColumns[j] = (j+1)*widthInCU/(pps->getNumTileColumnsMinus1()+1);
+    }   
+}
+
 
 
 Void TComPicSym::create  ( ChromaFormat chromaFormatIDC, Int iPicWidth, Int iPicHeight, UInt uiMaxWidth, UInt uiMaxHeight, UInt uiMaxDepth )
@@ -192,8 +312,8 @@ UInt TComPicSym::getPicSCUAddr( UInt SCUEncOrder )
 {
   return getCUOrderMap(SCUEncOrder/m_uiNumPartitions)*m_uiNumPartitions + SCUEncOrder%m_uiNumPartitions;
 }
-
-Void TComPicSym::initTiles(TComPPS *pps)
+//IAGO  the method was modified in order to receive the tiles' parameters from TEncGOP->compressGOP
+Void TComPicSym::initTiles(TComPPS *pps, double *time_CU, int frame)  
 {
   //set NumColumnsMinus1 and NumRowsMinus1
   setNumColumnsMinus1( pps->getNumTileColumnsMinus1() );
@@ -220,9 +340,70 @@ Void TComPicSym::initTiles(TComPPS *pps)
                                                - (row*getFrameHeightInCU())/numRows );
       }
     }
-  }
+    /*
+    printf("altura: %d  %d\n",m_tileParameters[0].getTileHeight(), m_tileParameters[1].getTileHeight());
+    printf("largura: %d  %d\n",m_tileParameters[0].getTileWidth(), m_tileParameters[1].getTileWidth());
+    printf("altura: %d  %d\n",m_tileParameters[2].getTileHeight(), m_tileParameters[3].getTileHeight());
+    printf("largura: %d  %d\n",m_tileParameters[2].getTileWidth(), m_tileParameters[3].getTileWidth());
+  */
+    }
   else
   {
+      int i;
+    //int cuIdx;
+    //for(cuIdx = 0; time_CU[cuIdx]>0; cuIdx++) //TESTS ENTERED ARRAY
+    //    printf("%d %f\n", cuIdx, time_CU[cuIdx]);
+   
+    UInt* optimalColumns =  (UInt*) malloc(pps->getNumTileColumnsMinus1()*sizeof(UInt));
+    UInt* optimalRows =  (UInt*) malloc(pps->getTileNumRowsMinus1()*sizeof(UInt));
+    for(i=0; i<pps->getNumTileColumnsMinus1(); i++)
+        optimalColumns[i]=0;
+    for(i=0; i<pps->getTileNumRowsMinus1(); i++)
+        optimalRows[i]=0;
+    if(frame)
+        extractOptimalPartitions(pps, time_CU, optimalColumns, optimalRows, getFrameWidthInCU(), getFrameHeightInCU());
+    else
+        extractUniformPartition(pps, optimalColumns, optimalRows, getFrameWidthInCU(), getFrameHeightInCU());
+    UInt* optimalColumns2 =  (UInt*) malloc(pps->getNumTileColumnsMinus1()*sizeof(UInt));
+    UInt* optimalRows2 =  (UInt*) malloc(pps->getTileNumRowsMinus1()*sizeof(UInt));
+    
+    optimalColumns2[0] = optimalColumns[0];
+    optimalRows2[0] = optimalRows[0];
+    //for(i=1; optimalColumns[i] != 0; i++){
+    for(i=1; i < pps->getNumTileColumnsMinus1(); i++){
+        optimalColumns2[i] = optimalColumns[i] - optimalColumns[i-1];
+    }
+    //for(i=1; optimalColumns[i] != 0; i++){
+    for(i=1; i < pps->getTileNumRowsMinus1(); i++){
+        optimalRows2[i] = optimalRows[i] - optimalRows[i-1];
+    }
+    
+    //printf("FRAME %d\n", frame);
+    //for(i=0; i < pps->getNumTileColumnsMinus1(); i++)
+    //    printf("coluna norm %d %d\n", i, optimalColumns2[i]);
+    //for(i=0; i < pps->getTileNumRowsMinus1(); i++)
+    //    printf("linha norm %d %d\n", i, optimalRows2[i]);
+    
+    
+    std::vector<Int> OptimalColumnsList(optimalColumns2, optimalColumns2 + 10);   //ARRUMAR PARA FICAR ADEQUADO
+    std::vector<Int> OptimalRowsList(optimalRows2, optimalRows2 + 10);         //ARRUMAR PARA FICAR ADEQUADO
+    //*
+    for(i=0; i < pps->getNumTileColumnsMinus1(); i++)
+        printf("coluna list %d\n", OptimalColumnsList[i]);
+    for(i=0; i < pps->getTileNumRowsMinus1(); i++)
+        printf("linha list %d\n", OptimalRowsList[i]);
+    
+    pps->setTileColumnWidth(OptimalColumnsList);
+    pps->setTileRowHeight(OptimalRowsList);
+      //##########################################################################################
+
+      
+   //pps->setTileColumnWidth(larguras);    //sets the column/row size with the received parameters
+  //pps->setTileRowHeight(alturas);
+//  printf("SET WIDTH: %d\n",larguras[0]);
+//  printf("SET HEIGHT: %d\n",alturas[0]);
+  //printf("numRows: %d\n numColumns: %d\n", numRows, numCols);
+  
     //set the width for each tile
     for(Int row=0; row < numRows; row++)
     {
@@ -246,6 +427,16 @@ Void TComPicSym::initTiles(TComPPS *pps)
       }
       m_tileParameters[getNumRowsMinus1() * numCols + col].setTileHeight( getFrameHeightInCU()-cumulativeTileHeight );
     }
+  /*  
+  printf("0 w h - %d %d\n", m_tileParameters[0].getTileWidth(), m_tileParameters[0].getTileHeight());
+  printf("1 w h - %d %d\n", m_tileParameters[1].getTileWidth(), m_tileParameters[1].getTileHeight());
+  printf("2 w h - %d %d\n", m_tileParameters[2].getTileWidth(), m_tileParameters[2].getTileHeight());
+  printf("3 w h - %d %d\n", m_tileParameters[3].getTileWidth(), m_tileParameters[3].getTileHeight());
+  printf("4 w h - %d %d\n", m_tileParameters[4].getTileWidth(), m_tileParameters[4].getTileHeight());
+  printf("5 w h - %d %d\n", m_tileParameters[5].getTileWidth(), m_tileParameters[5].getTileHeight());
+ */
+  
+ // printf("Height: %d\nWidth: %d\n", pps->getTileRowHeight(0), pps->getTileColumnWidth(0));
   }
 
 #if TILE_SIZE_CHECK
