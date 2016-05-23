@@ -39,7 +39,6 @@
 #include "TComSampleAdaptiveOffset.h"
 #include "TComSlice.h"
 #include <math.h>   //IAGO
-#include <sys/time.h>
 
 //! \ingroup TLibCommon
 //! \{
@@ -93,294 +92,6 @@ void shiftLeftBoundaries(TComPPS *pps, UInt* optimalCols, UInt *optimalRows){   
         }
     }
 }
-
-double maximum(double* values, int n){
-    int i;
-    double highest=0;
-    for(i=0; i<n; i++){
-        if(values[i] > highest)
-            highest = values[i];
-    }
-    return highest;
-}
-
-void extractOptimalPartitionsByForce(TComPPS *pps, double *time_CU, UInt* optimalCols, UInt* optimalRows, UInt widthInCU, UInt heightInCU){
-    //--------------------------------------2X2 TILES----------------------------------------
-    /*  2X2 TILES
-    int i, j, bestRow=0, bestColumn=0;
-    double frameMatrix[100][100];   //stores the workload for each CU
-    double bestSpeedup=0, currentSpeedup;
-    double tileWorkload[4];
-    
-    for (i=0; i<heightInCU; i++){       //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
-        for(j=0; j<widthInCU; j++){
-            frameMatrix[i][j] = time_CU[i*widthInCU+j];
-        }
-    }
-     
-    for(i=1; i<heightInCU; i++){
-        for(j=4; j<widthInCU-3; j++){
-            tileWorkload[0] = sumTilePartitions(frameMatrix, 0, i, 0, j);
-            tileWorkload[1] = sumTilePartitions(frameMatrix, 0, i, j, widthInCU);
-            tileWorkload[2] = sumTilePartitions(frameMatrix, i, heightInCU, 0, j);
-            tileWorkload[3] = sumTilePartitions(frameMatrix, i, heightInCU, j, widthInCU);
-             
-            currentSpeedup = (tileWorkload[0]+tileWorkload[1]+tileWorkload[2]+tileWorkload[3])/maximum(tileWorkload, 4);
-            if (currentSpeedup > bestSpeedup){
-                bestSpeedup = currentSpeedup;
-                bestRow = i;
-                bestColumn = j;
-            }
-        }
-    }
-    
-    optimalRows[0] = bestRow;
-    optimalCols[0] = bestColumn;
-    //printf("forced boundary\n");
-    //*/
-    
-    //--------------------------------------3X3 TILES-------------------------
-    /*  3X3 TILES
-    int i0, i1, j0, j1;
-    double frameMatrix[100][100];
-    double currentSpeedup, bestSpeedup=0;
-    double tileWorkload[9];
-    
-    for (i0=0; i0<heightInCU; i0++){       //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
-        for(j0=0; j0<widthInCU; j0++){
-            frameMatrix[i0][j0] = time_CU[i0*widthInCU+j0];
-        }
-    }
-    
-    for(i0=1; i0<heightInCU-1; i0++){
-        for(j0=4; j0<widthInCU-7; j0++){
-            for(i1=i0+1; i1<heightInCU; i1++){
-                for(j1=j0+4; j1<widthInCU-3; j1++){
-                    //printf("[%d][%d]    [%d][%d]\n", i0,j0,i1,j1);
-                    tileWorkload[0] = sumTilePartitions(frameMatrix, 0, i0, 0, j0);
-                    tileWorkload[1] = sumTilePartitions(frameMatrix, 0, i0, j0, j1);
-                    tileWorkload[2] = sumTilePartitions(frameMatrix, 0, i0, j1, widthInCU);
-                    tileWorkload[3] = sumTilePartitions(frameMatrix, i0, i1, 0, j0);
-                    tileWorkload[4] = sumTilePartitions(frameMatrix, i0, i1, j0, j1);
-                    tileWorkload[5] = sumTilePartitions(frameMatrix, i0, i1, j1, widthInCU);
-                    tileWorkload[6] = sumTilePartitions(frameMatrix, i1, heightInCU, 0, j0);
-                    tileWorkload[7] = sumTilePartitions(frameMatrix, i1, heightInCU, j0, j1);
-                    tileWorkload[8] = sumTilePartitions(frameMatrix, i1, heightInCU, j1, widthInCU);
-                    
-                    currentSpeedup = sumTilePartitions(frameMatrix, 0, heightInCU, 0 ,widthInCU)/maximum(tileWorkload, 9);
-                    if (currentSpeedup > bestSpeedup){
-                        bestSpeedup = currentSpeedup;
-                        optimalRows[0] = i0;
-                        optimalRows[1] = i1;
-                        optimalCols[0] = j0;
-                        optimalCols[1] = j1;
-                    } 
-                }
-            }
-        }
-    }
-    //*/
-   
-    //--------------------------------------4X4 TILES--------------------------------------
-    /*  4X4 TILES
-    int i0, i1, i2, j0, j1, j2;
-    double frameMatrix[100][100];
-    double currentSpeedup, bestSpeedup=0;
-    double tileWorkload[16];
-    
-    for (i0=0; i0<heightInCU; i0++){       //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
-        for(j0=0; j0<widthInCU; j0++){
-            frameMatrix[i0][j0] = time_CU[i0*widthInCU+j0];
-        }
-    }
-    
-    for(i0=1; i0<heightInCU-2; i0++){
-        for(j0=4; j0<widthInCU-11; j0++){
-            for(i1=i0+1; i1<heightInCU-1; i1++){
-                for(j1=j0+4; j1<widthInCU-7; j1++){
-                    for(i2=i1+1; i2<heightInCU; i2++){
-                        for(j2=j1+4; j2<widthInCU-3; j2++){
-
-                            //printf("[%d][%d]    [%d][%d]\n", i0,j0,i1,j1);
-                            tileWorkload[0] = sumTilePartitions(frameMatrix, 0, i0, 0, j0);
-                            tileWorkload[1] = sumTilePartitions(frameMatrix, 0, i0, j0, j1);
-                            tileWorkload[2] = sumTilePartitions(frameMatrix, 0, i0, j1, j2);
-                            tileWorkload[3] = sumTilePartitions(frameMatrix, 0, i0, j2, widthInCU);
-                            
-                            tileWorkload[4] = sumTilePartitions(frameMatrix, i0, i1, 0, j0);
-                            tileWorkload[5] = sumTilePartitions(frameMatrix, i0, i1, j0, j1);
-                            tileWorkload[6] = sumTilePartitions(frameMatrix, i0, i1, j1, j2);
-                            tileWorkload[7] = sumTilePartitions(frameMatrix, i0, i1, j2, widthInCU);
-                            
-                            tileWorkload[8] = sumTilePartitions(frameMatrix, i1, i2, 0, j0);
-                            tileWorkload[9] = sumTilePartitions(frameMatrix, i1, i2, j0, j1);
-                            tileWorkload[10] = sumTilePartitions(frameMatrix, i1, i2, j1, j2);
-                            tileWorkload[11] = sumTilePartitions(frameMatrix, i1, i2, j2, widthInCU);
-                            
-                            tileWorkload[12] = sumTilePartitions(frameMatrix, i2, heightInCU, 0, j0);
-                            tileWorkload[13] = sumTilePartitions(frameMatrix, i2, heightInCU, j0, j1);
-                            tileWorkload[14] = sumTilePartitions(frameMatrix, i2, heightInCU, j1, j2);
-                            tileWorkload[15] = sumTilePartitions(frameMatrix, i2, heightInCU, j2, widthInCU);
-                            
-                            currentSpeedup = sumTilePartitions(frameMatrix, 0, heightInCU, 0 ,widthInCU)/maximum(tileWorkload, 16);
-                            if (currentSpeedup > bestSpeedup){
-                                bestSpeedup = currentSpeedup;
-                                optimalRows[0] = i0;
-                                optimalRows[1] = i1;
-                                optimalRows[2] = i2;
-                                optimalCols[0] = j0;
-                                optimalCols[1] = j1;
-                                optimalCols[2] = j2;
-                            } 
-                        }
-                    }
-                }
-            }
-        }
-    }
-    //*/
-    
-       
-    
-    //--------------------------------------3X2 TILES--------------------------------------
-    //----------------------------------3 COLUMNS X 2 ROW-----------------------------------
-    /*  3X2 TILES
-    int i, j0, j1;
-    int nTiles = 6;
-    double frameMatrix[100][100];
-    double currentSpeedup, bestSpeedup=0;
-    double tileWorkload[nTiles];
-    
-    for (i=0; i<heightInCU; i++){       //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
-        for(j0=0; j0<widthInCU; j0++){
-            frameMatrix[i][j0] = time_CU[i*widthInCU+j0];
-        }
-    }
-    
-    for(i=1; i<heightInCU; i++){
-        for(j0=4; j0<widthInCU-7; j0++){
-            for(j1=j0+4; j1<widthInCU-3; j1++){
-                //printf("[%d][%d]    [%d][%d]\n", i0,j0,i1,j1);
-                tileWorkload[0] = sumTilePartitions(frameMatrix, 0, i, 0, j0);
-                tileWorkload[1] = sumTilePartitions(frameMatrix, 0, i, j0, j1);
-                tileWorkload[2] = sumTilePartitions(frameMatrix, 0, i, j1, widthInCU);
-               
-                tileWorkload[3] = sumTilePartitions(frameMatrix, i, heightInCU, 0, j0);
-                tileWorkload[4] = sumTilePartitions(frameMatrix, i, heightInCU, j0, j1);
-                tileWorkload[5] = sumTilePartitions(frameMatrix, i, heightInCU, j1, widthInCU);
-                        
-                currentSpeedup = sumTilePartitions(frameMatrix, 0, heightInCU, 0 ,widthInCU)/maximum(tileWorkload, nTiles);
-                if (currentSpeedup > bestSpeedup){
-                    bestSpeedup = currentSpeedup;
-                    optimalRows[0] = i;
-                    optimalCols[0] = j0;
-                    optimalCols[1] = j1;
-                } 
-            }
-        }
-    }
-    //*/
-    
-    
-    //--------------------------------------2X3 TILES--------------------------------------
-    //----------------------------------2 COLUMNS X 3 ROW-----------------------------------
-    /*  2X3 TILES
-    int i0, i1, j;
-    int nTiles = 6;
-    double frameMatrix[100][100];
-    double currentSpeedup, bestSpeedup=0;
-    double tileWorkload[nTiles];
-    
-    for (i0=0; i0<heightInCU; i0++){       //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
-        for(j=0; j<widthInCU; j++){
-            frameMatrix[i0][j] = time_CU[i0*widthInCU+j];
-        }
-    }
-    
-    for(i0=1; i0<heightInCU-1; i0++){
-        for(j=4; j<widthInCU-3; j++){
-            for(i1=i0+1; i1<heightInCU; i1++){
-            
-                //printf("[%d][%d]    [%d][%d]\n", i0,j0,i1,j1);
-                tileWorkload[0] = sumTilePartitions(frameMatrix, 0, i0, 0, j);
-                tileWorkload[1] = sumTilePartitions(frameMatrix, 0, i0, j, widthInCU);
-                
-                tileWorkload[2] = sumTilePartitions(frameMatrix, i0, i1, 0, j);
-                tileWorkload[3] = sumTilePartitions(frameMatrix, i0, i1, j, widthInCU);
-                
-                tileWorkload[4] = sumTilePartitions(frameMatrix, i1, heightInCU, 0, j);
-                tileWorkload[5] = sumTilePartitions(frameMatrix, i1, heightInCU, j, widthInCU);
-                        
-                currentSpeedup = sumTilePartitions(frameMatrix, 0, heightInCU, 0 ,widthInCU)/maximum(tileWorkload, nTiles);
-                if (currentSpeedup > bestSpeedup){
-                    bestSpeedup = currentSpeedup;
-                    optimalRows[0] = i0;
-                    optimalRows[1] = i1;
-                    optimalCols[0] = j;
-                } 
-            }
-        }
-    }
-    //*/
-    
-    //--------------------------------------2X1 TILES-------------------------
-    //----------------------------------2 COLUMNS X 1 ROW---------------------
-    /*  2X1 TILES
-    int i, j;
-    double frameMatrix[100][100];
-    double currentSpeedup, bestSpeedup=0;
-    double tileWorkload[2];
-    
-    for (i=0; i<heightInCU; i++){       //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
-        for(j=0; j<widthInCU; j++){
-            frameMatrix[i][j] = time_CU[i*widthInCU+j];
-        }
-    }
-    
-    for(j=4; j<widthInCU-3; j++){
-        //printf("[%d][%d]    [%d][%d]\n", i0,j0,i1,j1);
-        tileWorkload[0] = sumTilePartitions(frameMatrix, 0, heightInCU, 0, j);
-        tileWorkload[1] = sumTilePartitions(frameMatrix, 0, heightInCU, j, widthInCU);
-                
-        currentSpeedup = sumTilePartitions(frameMatrix, 0, heightInCU, 0 ,widthInCU)/maximum(tileWorkload, 2);
-        if (currentSpeedup > bestSpeedup){
-            bestSpeedup = currentSpeedup;
-            optimalCols[0] = j;
-        }        
-    }
-    //*/
-
-    //--------------------------------------1X2 TILES-------------------------
-    //----------------------------------1 COLUMN X 2 ROWS---------------------
-    //*  1X2 TILES
-    int i, j;
-    double frameMatrix[100][100];
-    double currentSpeedup, bestSpeedup=0;
-    double tileWorkload[2];
-    
-    for (i=0; i<heightInCU; i++){       //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
-        for(j=0; j<widthInCU; j++){
-            frameMatrix[i][j] = time_CU[i*widthInCU+j];
-        }
-    }
-    
-    for(i=1; i<heightInCU; i++){
-        //printf("[%d][%d]    [%d][%d]\n", i0,j0,i1,j1);
-        tileWorkload[0] = sumTilePartitions(frameMatrix, 0, i, 0, widthInCU);
-        tileWorkload[1] = sumTilePartitions(frameMatrix, i, heightInCU, 0, widthInCU);
-                
-        currentSpeedup = sumTilePartitions(frameMatrix, 0, heightInCU, 0 ,widthInCU)/maximum(tileWorkload, 2);
-        if (currentSpeedup > bestSpeedup){
-            bestSpeedup = currentSpeedup;
-            optimalRows[0] = i;
-        }  
-    }
-    //*/    
-    
-}
-
-
-
 void extractOptimalPartitions(TComPPS *pps, double *time_CU, UInt* optimalCols, UInt* optimalRows, UInt widthInCU, UInt heightInCU){ 
     //double** frameMatrix = (double**) malloc(heightInCU*sizeof(double*));
     //for(i=0; i<widthInCU; i++)  frameMatrix[i] = (double*) malloc(widthInCU*sizeof(double*));
@@ -391,7 +102,7 @@ void extractOptimalPartitions(TComPPS *pps, double *time_CU, UInt* optimalCols, 
     
     
     
-    for(i=0; i<heightInCU; i++){        //INITIALISE THE FRAME MATRIX WITH THE WORKLOAD ARRAY
+    for(i=0; i<heightInCU; i++){        //INITIALISE THE FRAME MATRIX WITH THE ARRAY
         for(j=0; j<widthInCU; j++){
             frameMatrix[i][j] = time_CU[i*widthInCU+j];
             //printf("%d %f\n", i*widthInCU+j, time_CU[i*widthInCU+j]);
@@ -602,7 +313,7 @@ UInt TComPicSym::getPicSCUAddr( UInt SCUEncOrder )
   return getCUOrderMap(SCUEncOrder/m_uiNumPartitions)*m_uiNumPartitions + SCUEncOrder%m_uiNumPartitions;
 }
 //IAGO  the method was modified in order to receive the tiles' parameters from TEncGOP->compressGOP
-Void TComPicSym::initTiles(TComPPS *pps, double *time_CU, int frame, double *timeAlgorithm)  
+Void TComPicSym::initTiles(TComPPS *pps, double *time_CU, int frame)  
 {
   //set NumColumnsMinus1 and NumRowsMinus1
   setNumColumnsMinus1( pps->getNumTileColumnsMinus1() );
@@ -627,10 +338,8 @@ Void TComPicSym::initTiles(TComPPS *pps, double *time_CU, int frame, double *tim
                                               - (col*getFrameWidthInCU())/numCols );
         m_tileParameters[tileIdx].setTileHeight( (row+1)*getFrameHeightInCU()/numRows
                                                - (row*getFrameHeightInCU())/numRows );
-        //printf("TILE %d largura: %d altura: %d\n", tileIdx, m_tileParameters[tileIdx].getTileWidth(), m_tileParameters[tileIdx].getTileHeight() );
       }
     }
-    
     /*
     printf("altura: %d  %d\n",m_tileParameters[0].getTileHeight(), m_tileParameters[1].getTileHeight());
     printf("largura: %d  %d\n",m_tileParameters[0].getTileWidth(), m_tileParameters[1].getTileWidth());
@@ -640,12 +349,6 @@ Void TComPicSym::initTiles(TComPPS *pps, double *time_CU, int frame, double *tim
     }
   else
   {
-    //IAGO BEGIN
-    struct timeval  tv1, tv2;
-    gettimeofday(&tv1, NULL);
-    //printf("pegou horas1\n");
-    //IAGO END
-    
       int i;
     //int cuIdx;
     //for(cuIdx = 0; time_CU[cuIdx]>0; cuIdx++) //TESTS ENTERED ARRAY
@@ -658,8 +361,7 @@ Void TComPicSym::initTiles(TComPPS *pps, double *time_CU, int frame, double *tim
     for(i=0; i<pps->getTileNumRowsMinus1(); i++)
         optimalRows[i]=0;
     if(frame)
-        extractOptimalPartitionsByForce(pps, time_CU, optimalColumns, optimalRows, getFrameWidthInCU(), getFrameHeightInCU());
-        //extractOptimalPartitions(pps, time_CU, optimalColumns, optimalRows, getFrameWidthInCU(), getFrameHeightInCU());
+        extractOptimalPartitions(pps, time_CU, optimalColumns, optimalRows, getFrameWidthInCU(), getFrameHeightInCU());
     else
         extractUniformPartition(pps, optimalColumns, optimalRows, getFrameWidthInCU(), getFrameHeightInCU());
     UInt* optimalColumns2 =  (UInt*) malloc(pps->getNumTileColumnsMinus1()*sizeof(UInt));
@@ -693,15 +395,6 @@ Void TComPicSym::initTiles(TComPPS *pps, double *time_CU, int frame, double *tim
     
     pps->setTileColumnWidth(OptimalColumnsList);
     pps->setTileRowHeight(OptimalRowsList);
-    
-    //IAGO BEGIN
-    gettimeofday(&tv2, NULL);
-    //printf("pegou horas 2\n");
-    //printf("dif %f\n", (double) (tv2.tv_usec - tv1.tv_usec)/1000000 +
-    //         (double) (tv2.tv_sec - tv1.tv_sec));
-    *timeAlgorithm = *timeAlgorithm + (double) (tv2.tv_usec - tv1.tv_usec)/1000000 +
-             (double) (tv2.tv_sec - tv1.tv_sec);
-
       //##########################################################################################
 
       

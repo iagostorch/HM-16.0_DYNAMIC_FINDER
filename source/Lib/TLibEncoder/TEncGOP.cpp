@@ -54,11 +54,10 @@ using namespace std;
 #if RExt__ENVIRONMENT_VARIABLE_DEBUG_AND_TEST
 Bool g_bFinalEncode = false;
 #endif
-//IAGO
-extern double timeAlgorithm;    //count the time spent in our algorithm
+
 extern FILE *time_perTile;
 extern double time_tile[100];
-extern double time_compressEncode_CU[1001];    //SAVES THE TOTAL TIME PER CU   //IAGO
+extern double time_compressEncode_CU[1001];    //IAGO SAVES THE TOTAL TIME PER CU   //IAGO
 //! \ingroup TLibEncoder
 //! \{
 
@@ -1157,7 +1156,7 @@ Void TEncGOP::compressGOP( Int iPOCLast, Int iNumPicRcvd, TComList<TComPic*>& rc
     extern int frame;
     //extern FILE *tilesWidthsHeights;
        
-    pcPic->getPicSym()->initTiles(pcSlice->getPPS(), time_compressEncode_CU, frame, &timeAlgorithm);   
+    pcPic->getPicSym()->initTiles(pcSlice->getPPS(), time_compressEncode_CU, frame);   
 
     // Allocate some coders, now we know how many tiles there are.
     const Int iNumSubstreams = pcSlice->getPPS()->getNumSubstreams();
