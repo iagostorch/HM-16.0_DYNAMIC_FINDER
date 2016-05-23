@@ -1,0 +1,7 @@
+objects/AnnexBread.r.o: \
+ /home/iagostorch/ICIP2016/HM/HM-16.0_using_pre_defined_boundaries/HM-16.0/build/linux/lib/TLibDecoder/../../../../source/Lib/TLibDecoder/AnnexBread.cpp \
+ /home/iagostorch/ICIP2016/HM/HM-16.0_using_pre_defined_boundaries/HM-16.0/build/linux/lib/TLibDecoder/../../../../source/Lib/TLibDecoder/AnnexBread.h \
+ /home/iagostorch/ICIP2016/HM/HM-16.0_using_pre_defined_boundaries/HM-16.0/build/linux/lib/TLibDecoder/../../../../source/Lib/TLibCommon/TypeDef.h
+ /home/iagostorch/ICIP2016/HM/HM-16.0_using_pre_defined_boundaries/HM-16.0/build/linux/lib/TLibDecoder/../../../../source/Lib/TLibDecoder/AnnexBread.cpp :
+ /home/iagostorch/ICIP2016/HM/HM-16.0_using_pre_defined_boundaries/HM-16.0/build/linux/lib/TLibDecoder/../../../../source/Lib/TLibDecoder/AnnexBread.h :
+ /home/iagostorch/ICIP2016/HM/HM-16.0_using_pre_defined_boundaries/HM-16.0/build/linux/lib/TLibDecoder/../../../../source/Lib/TLibCommon/TypeDef.h :

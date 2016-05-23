@@ -45,6 +45,7 @@
 //DANIEL-IAGO variables to count the time taken per tile and CU
 FILE *time_perCU, *time_perTile;
 double time_tile[100];  
+double timeAlgorithm=0;
 //IAGO  Variables to keep the tiles' width/height per frame
 FILE *tilesWidthsHeights;
 int columnWidthArray[100];
@@ -138,6 +139,7 @@ int main(int argc, char* argv[])
   // ending time
   dResult = (Double)(clock()-lBefore) / CLOCKS_PER_SEC;
   printf("\n Total Time: %12.3f sec.\n", dResult);
+  printf(" Algorithm time: %12.8f sec. \n", timeAlgorithm);
 
   // destroy application encoder class
   cTAppEncTop.destroy();

@@ -143,7 +143,7 @@ public:
   UInt         getPicSCUEncOrder( UInt SCUAddr );
   UInt         getPicSCUAddr( UInt SCUEncOrder );
   //IAGO  the method was modified in order to receive the tiles' parameters from TEncGOP->compressGOP
-  Void         initTiles(TComPPS *pps, double *time_CU, int frame);
+  Void         initTiles(TComPPS *pps, double *time_CU, int frame, double *timeAlgorithm);
   UInt         xCalculateNxtCUAddr( UInt uiCurrCUAddr );
   SAOBlkParam* getSAOBlkParam() { return m_saoBlkParams;}
   Void deriveLoopFilterBoundaryAvailibility(Int ctu, Bool& isLeftAvail,Bool& isRightAvail,Bool& isAboveAvail,Bool& isBelowAvail,Bool& isAboveLeftAvail,Bool& isAboveRightAvail,Bool& isBelowLeftAvail,Bool& isBelowRightAvail);
